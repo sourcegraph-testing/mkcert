@@ -15,7 +15,6 @@ import (
 	"crypto/x509/pkix"
 	"encoding/asn1"
 	"encoding/pem"
-	"io/ioutil"
 	"log"
 	"math/big"
 	"net"
@@ -111,18 +110,18 @@ func (m *mkcert) makeCert(hosts []string) {
 	if !m.pkcs12 {
 		privDER, err := x509.MarshalPKCS8PrivateKey(priv)
 		fatalIfErr(err, "failed to encode certificate key")
-		err = ioutil.WriteFile(keyFile, pem.EncodeToMemory(
+		err = os.WriteFile(keyFile, pem.EncodeToMemory(
 			&pem.Block{Type: "PRIVATE KEY", Bytes: privDER}), 0600)
 		fatalIfErr(err, "failed to save certificate key")
 
-		err = ioutil.WriteFile(certFile, pem.EncodeToMemory(
+		err = os.WriteFile(certFile, pem.EncodeToMemory(
 			&pem.Block{Type: "CERTIFICATE", Bytes: cert}), 0644)
 		fatalIfErr(err, "failed to save certificate")
 	} else {
 		domainCert, _ := x509.ParseCertificate(cert)
 		pfxData, err := pkcs12.Encode(rand.Reader, priv, domainCert, []*x509.Certificate{m.caCert}, "changeit")
 		fatalIfErr(err, "failed to generate PKCS#12")
-		err = ioutil.WriteFile(p12File, pfxData, 0644)
+		err = os.WriteFile(p12File, pfxData, 0644)
 		fatalIfErr(err, "failed to save PKCS#12")
 	}
 
@@ -202,7 +201,7 @@ func (m *mkcert) makeCertFromCSR() {
 		log.Fatalln("ERROR: can't create new certificates because the CA key (rootCA-key.pem) is missing")
 	}
 
-	csrPEMBytes, err := ioutil.ReadFile(m.csrPath)
+	csrPEMBytes, err := os.ReadFile(m.csrPath)
 	fatalIfErr(err, "failed to read the CSR")
 	csrPEM, _ := pem.Decode(csrPEMBytes)
 	if csrPEM == nil {
@@ -247,7 +246,7 @@ func (m *mkcert) makeCertFromCSR() {
 	}
 	certFile, _, _ := m.fileNames(hosts)
 
-	err = ioutil.WriteFile(certFile, pem.EncodeToMemory(
+	err = os.WriteFile(certFile, pem.EncodeToMemory(
 		&pem.Block{Type: "CERTIFICATE", Bytes: cert}), 0644)
 	fatalIfErr(err, "failed to save certificate")
 
@@ -264,7 +263,7 @@ func (m *mkcert) loadCA() {
 		log.Printf("Using the local CA at \"%s\" ✨\n", m.CAROOT)
 	}
 
-	certPEMBlock, err := ioutil.ReadFile(filepath.Join(m.CAROOT, rootName))
+	certPEMBlock, err := os.ReadFile(filepath.Join(m.CAROOT, rootName))
 	fatalIfErr(err, "failed to read the CA certificate")
 	certDERBlock, _ := pem.Decode(certPEMBlock)
 	if certDERBlock == nil || certDERBlock.Type != "CERTIFICATE" {
@@ -277,7 +276,7 @@ func (m *mkcert) loadCA() {
 		return // keyless mode, where only -install works
 	}
 
-	keyPEMBlock, err := ioutil.ReadFile(filepath.Join(m.CAROOT, rootKeyName))
+	keyPEMBlock, err := os.ReadFile(filepath.Join(m.CAROOT, rootKeyName))
 	fatalIfErr(err, "failed to read the CA key")
 	keyDERBlock, _ := pem.Decode(keyPEMBlock)
 	if keyDERBlock == nil || keyDERBlock.Type != "PRIVATE KEY" {
@@ -332,11 +331,11 @@ func (m *mkcert) newCA() {
 
 	privDER, err := x509.MarshalPKCS8PrivateKey(priv)
 	fatalIfErr(err, "failed to encode CA key")
-	err = ioutil.WriteFile(filepath.Join(m.CAROOT, rootKeyName), pem.EncodeToMemory(
+	err = os.WriteFile(filepath.Join(m.CAROOT, rootKeyName), pem.EncodeToMemory(
 		&pem.Block{Type: "PRIVATE KEY", Bytes: privDER}), 0400)
 	fatalIfErr(err, "failed to save CA key")
 
-	err = ioutil.WriteFile(filepath.Join(m.CAROOT, rootName), pem.EncodeToMemory(
+	err = os.WriteFile(filepath.Join(m.CAROOT, rootName), pem.EncodeToMemory(
 		&pem.Block{Type: "CERTIFICATE", Bytes: cert}), 0644)
 	fatalIfErr(err, "failed to save CA key")
 
